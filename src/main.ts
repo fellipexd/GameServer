@@ -1,11 +1,12 @@
 import express from "express";
-import AccountModel, { AccountDTO } from './models/account';
-import { Server, Socket } from "socket.io";
 import http from 'http';
+import jwt from 'jsonwebtoken';
+import { Server, Socket } from "socket.io";
+import AccountModel, { AccountDTO } from './models/account';
 import RedisService from './services/redis'
 import RoutesMap from "./utils/routesMap";
 import routes from "./routes/";
-import jwt from 'jsonwebtoken';
+import WorldController from "./controllers/world";
 
 interface SocketUser {
 	id: number
@@ -22,7 +23,7 @@ const port = 3000;
 
 const httpServer = http.createServer(app);
 
-const io = new Server<SocketData>(httpServer, {
+export const io = new Server<SocketData>(httpServer, {
 	cors: {
 		origin: '*'
 	}
@@ -66,7 +67,13 @@ io.on('connection', async(s: Socket) => {
 			s.disconnect(true)
 			return 
 		}
-		s.data.user = decoded
+		s.data.user = decoded;
+
+		const rs = new RedisService();
+		rs.user.setUser(s.data.user, {...s.data.user, socket: s.id});
+		
 		RoutesMap(routes, io, s)
 	})
 });
+
+new WorldController(io);

@@ -20,11 +20,13 @@ class EggController {
             await this.rs.eggs.setEgg(socket.data.user, egg.toJSON());
 
             socket.emit(`my-safe-room/create-egg`, JSON.stringify(egg.toJSON()));
-
-            this.eggEngine.CountDown(egg.toJSON(), io, socket);
         } catch (e) {
             console.log(e)
         }
+    }
+
+    public async instanceEggs() {
+        const eggs = await EggModel.findAll({ where: {  } })
     }
 }
 

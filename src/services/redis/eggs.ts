@@ -10,9 +10,33 @@ interface IEgg {
 }
 
 class RedisEggsService {
+    async getAllActiveEggs() {
+        try {
+            const keys = await redis.multi().keys('eggs:*').exec();
+            const filtredEggs: Array<any> = [];
+            
+            //@ts-ignore
+            await Promise.all(keys[0]?.map(async(key: any) => {
+                const eggJson = await redis.get(key);
+                if (!eggJson) { return }
+
+                const unfiltredEgg = JSON.parse(eggJson);
+
+                if (unfiltredEgg.countDown <= 0 && unfiltredEgg?.hatched) { return }
+
+                filtredEggs.push(unfiltredEgg)
+            }))
+
+            return filtredEggs;
+        } catch (e) {
+            console.log(e)
+            throw e;
+        }
+    }
+
     async setEgg<T extends IEgg>(user: ISetUser, value: T): Promise<void> {
         try {
-		    await redis.set(`eggs:${base64Encode(userDTO(user, {eggId: value.id}))}`, this.eggDTO(value));
+            await redis.set(`eggs:${base64Encode(userDTO(user, { eggId: value.id }))}`, this.eggDTO(value));
         } catch (e) {
             throw e;
         }
@@ -20,7 +44,7 @@ class RedisEggsService {
 
     async getEgg(user: ISetUser, eggId: string): Promise<void> {
         try {
-		    await redis.get(`eggs:${base64Encode(userDTO(user, {eggId}))}`);
+            await redis.get(`eggs:${base64Encode(userDTO(user, { eggId }))}`);
         } catch (e) {
             throw e;
         }
@@ -28,7 +52,7 @@ class RedisEggsService {
 
     async delEgg(user: ISetUser, eggId: string): Promise<void> {
         try {
-		    await redis.del(`eggs:${base64Encode(userDTO(user, {eggId}))}`);
+            await redis.del(`eggs:${base64Encode(userDTO(user, { eggId }))}`);
         } catch (e) {
             throw e;
         }
@@ -38,13 +62,13 @@ class RedisEggsService {
         try {
             const eggIds = await EggModel.findAll({
                 where: {
-                  account: user.id,
+                    account: user.id,
                 },
                 attributes: ['id']
-              })
+            })
 
             const eggs = await Promise.all(eggIds?.map(async (egg: any) => {
-                const newEgg = await redis.get(`eggs:${base64Encode(userDTO(user, {eggId: egg.id}))}`)
+                const newEgg = await redis.get(`eggs:${base64Encode(userDTO(user, { eggId: egg.id }))}`)
                 return newEgg && JSON.parse(newEgg)
             }))
 
@@ -57,7 +81,7 @@ class RedisEggsService {
 
     async delAllEggsBySocket(user: ISetUser): Promise<void> {
         try {
-		    await redis.del(`eggs:${base64Encode(userDTO(user))}`);
+            await redis.del(`eggs:${base64Encode(userDTO(user))}`);
         } catch (e) {
             throw e;
         }
@@ -69,7 +93,7 @@ class RedisEggsService {
                 this.delAllEggsBySocket(user);
                 return;
             }
-		    await redis.set(`eggs:${base64Encode(userDTO(user))}`, JSON.stringify(value));
+            await redis.set(`eggs:${base64Encode(userDTO(user))}`, JSON.stringify(value));
         } catch (e) {
             throw e;
         }
